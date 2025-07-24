@@ -1,0 +1,50 @@
+[
+  {
+    "id": "1",
+    "title": "The Lion King",
+    "description": "A young lion prince flees his kingdom only to learn the true meaning of responsibility and bravery.",
+    "type": "movie",
+    "category": "Kids",
+    "duration": 118,
+    "is_premium": false,
+    "is_featured": true,
+    "thumbnail_url": "https://m.media-amazon.com/images/M/MV5BMjIwMjE1Nzc4NV5BMl5BanBnXkFtZTgwNDg4OTA1NzM@._V1_.jpg",
+    "cover_image_url": "https://images.hdqwalls.com/wallpapers/the-lion-king-2019-movie-4k-ej.jpg"
+  },
+  {
+    "id": "2",
+    "title": "Black Panther",
+    "description": "T'Challa, heir to the hidden but advanced kingdom of Wakanda, must step forward to lead his people into a new future.",
+    "type": "movie",
+    "category": "Action",
+    "duration": 134,
+    "is_premium": true,
+    "is_featured": true,
+    "thumbnail_url": "https://m.media-amazon.com/images/M/MV5BMTg1MTY2MjYzNV5BMl5BanBnXkFtZTgwMTc4NTMwNDI@._V1_.jpg",
+    "cover_image_url": "https://wallpaperaccess.com/full/1074507.jpg"
+  },
+  {
+    "id": "3",
+    "title": "CNN International",
+    "description": "24-hour international news channel",
+    "type": "live_tv",
+    "category": "News",
+    "duration": 0,
+    "is_premium": false,
+    "is_featured": true,
+    "thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/CNN.svg/1200px-CNN.svg.png",
+    "cover_image_url": "https://wallpapercave.com/wp/wp2446876.jpg"
+  },
+  {
+    "id": "4",
+    "title": "Premier League Highlights",
+    "description": "Best moments from the English Premier League",
+    "type": "sport",
+    "category": "Sports",
+    "duration": 45,
+    "is_premium": true,
+    "is_featured": true,
+    "thumbnail_url": "https://logos-world.net/wp-content/uploads/2020/06/Premier-League-Logo.png",
+    "cover_image_url": "https://wallpapercave.com/wp/wp2446876.jpg"
+  }
+]

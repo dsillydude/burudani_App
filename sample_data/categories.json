@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "name": "Action",
+    "description": "Action-packed movies and shows"
+  },
+  {
+    "id": "2",
+    "name": "Comedy",
+    "description": "Funny movies and shows"
+  },
+  {
+    "id": "3",
+    "name": "Drama",
+    "description": "Dramatic content"
+  },
+  {
+    "id": "4",
+    "name": "Sports",
+    "description": "Sports content and events"
+  },
+  {
+    "id": "5",
+    "name": "News",
+    "description": "News and current affairs"
+  },
+  {
+    "id": "6",
+    "name": "Kids",
+    "description": "Content for children"
+  }
+]
