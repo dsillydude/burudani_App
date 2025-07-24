@@ -40,26 +40,25 @@ db.init_app(app)
 
 # Function to create or update admin user (remains from previous debug)
 def create_admin_user_on_startup():
-    with app.app_context():
-        print("--- Checking/Creating Admin User ---")
-        admin_email = 'admin@burudani.com'
-        admin_password = 'admin123'
+    print("--- Checking/Creating Admin User ---")
+    admin_email = 'admin@burudani.com'
+    admin_password = 'admin123'
 
-        user = User.query.filter_by(email=admin_email).first()
-        if not user:
-            print(f"Admin user '{admin_email}' not found. Creating...")
-            admin_user = User(email=admin_email, phone_number='1234567890') # Add dummy phone
-            admin_user.set_password(admin_password)
-            db.session.add(admin_user)
-            db.session.commit()
-            print(f"Admin user '{admin_email}' created successfully!")
-        else:
-            print(f"Admin user '{admin_email}' already exists.")
-        print("--- Admin User Check Complete ---")
+    user = User.query.filter_by(email=admin_email).first()
+    if not user:
+        print(f"Admin user '{admin_email}' not found. Creating...")
+        admin_user = User(email=admin_email, phone_number='1234567890') # Add dummy phone
+        admin_user.set_password(admin_password)
+        db.session.add(admin_user)
+        db.session.commit()
+        print(f"Admin user '{admin_email}' created successfully!")
+    else:
+        print(f"Admin user '{admin_email}' already exists.")
+    print("--- Admin User Check Complete ---")
 
-# Hook to run code after app context is pushed
-@app.before_first_request
-def create_db_and_admin():
+# FIXED: Initialize database and admin user using app context (Flask 3.x compatible)
+# This replaces the deprecated @app.before_first_request decorator
+with app.app_context():
     db.create_all() # Create all database tables
     create_admin_user_on_startup() # Ensure admin user exists
 
@@ -85,3 +84,4 @@ def health_check():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
