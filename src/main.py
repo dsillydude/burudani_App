@@ -14,6 +14,7 @@ from src.routes.user import user_bp
 from src.routes.auth import auth_bp
 from src.routes.content import content_bp
 from src.routes.streaming import streaming_bp
+from src.routes.payments import payments_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
@@ -30,6 +31,7 @@ app.register_blueprint(auth_bp, url_prefix='/api')
 app.register_blueprint(user_bp, url_prefix='/api')
 app.register_blueprint(content_bp, url_prefix='/api')
 app.register_blueprint(streaming_bp, url_prefix='/api')
+app.register_blueprint(payments_bp, url_prefix='/api')
 
 # Database configuration
 # Use DATABASE_URL environment variable for production (Render), fallback to SQLite for local
