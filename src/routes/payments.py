@@ -21,7 +21,7 @@ class Payment(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.String(100), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Allow null for guest payments
+    user_id = db.Column(db.String, db.ForeignKey('users.id'), nullable=True)  # Allow null for guest payments
     amount = db.Column(db.Float, nullable=False)
     currency = db.Column(db.String(3), default='TZS')
     payment_status = db.Column(db.String(20), default='PENDING')
