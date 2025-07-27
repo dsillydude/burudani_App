@@ -1,18 +1,18 @@
-# burudani_backend/src/routes/payments.py
+# burudani_backend/src/routes/payments_fixed.py
 
 import os
 import uuid
 import requests
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from src.models.user import db, User
 
 payments_bp = Blueprint('payments', __name__)
 
-# Zeno API Configuration
+# Zeno API Configuration - Use environment variable for production
+ZENO_API_KEY = os.environ.get('ZENO_API_KEY', 'ELyri3n4iLR6nqwixrwkjefTBFuxHSWlbho-esVC4fHYrQeZ4fKlOXa91MVrPfjI3nAYvmZO842Nle37tsK3lw')
 ZENO_API_URL = "https://zenoapi.com/api/payments/mobile_money_tanzania"
-ZENO_API_KEY = "ELyri3n4iLR6nqwixrwkjefTBFuxHSWlbho-esVC4fHYrQeZ4fKlOXa91MVrPfjI3nAYvmZO842Nle37tsK3lw"
 ZENO_ORDER_STATUS_URL = "https://zenoapi.com/api/payments/order-status"
 
 # Payment model (you might want to create a separate model file for this)
@@ -21,7 +21,7 @@ class Payment(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.String(100), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Allow null for guest payments
     amount = db.Column(db.Float, nullable=False)
     currency = db.Column(db.String(3), default='TZS')
     payment_status = db.Column(db.String(20), default='PENDING')
@@ -57,16 +57,22 @@ class Payment(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
-@payments_bp.route('/payments/initiate', methods=['POST'])
-@jwt_required()
-def initiate_payment():
-    """Initiate a Zeno PUSH USSD payment"""
+def get_current_user():
+    """Helper function to get current user, handling both authenticated and guest users"""
     try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+        return User.query.get(user_id), user_id
+    except:
+        # No valid JWT token, treat as guest user
+        return None, None
+
+@payments_bp.route('/payments/initiate', methods=['POST'])
+def initiate_payment():
+    """Initiate a Zeno PUSH USSD payment - works for both authenticated and guest users"""
+    try:
+        # Get current user if authenticated, otherwise proceed as guest
+        user, current_user_id = get_current_user()
         
         data = request.get_json()
         
@@ -79,11 +85,15 @@ def initiate_payment():
         # Generate unique order ID
         order_id = str(uuid.uuid4())
         
+        # Prepare default values
+        default_email = data.get('buyer_email', user.email if user else 'guest@burudani.com')
+        default_name = data.get('buyer_name', user.email.split('@')[0] if user else 'Burudani User')
+        
         # Prepare payment data for Zeno API
         payment_data = {
             "order_id": order_id,
-            "buyer_email": data.get('buyer_email', user.email),
-            "buyer_name": data.get('buyer_name', f"{user.email.split('@')[0]}"),
+            "buyer_email": default_email,
+            "buyer_name": default_name,
             "buyer_phone": data['buyer_phone'],
             "amount": int(data['amount'])  # Ensure amount is integer
         }
@@ -96,11 +106,11 @@ def initiate_payment():
         # Create payment record in database
         payment = Payment(
             order_id=order_id,
-            user_id=current_user_id,
+            user_id=current_user_id,  # Can be None for guest users
             amount=float(data['amount']),
             buyer_phone=data['buyer_phone'],
-            buyer_email=payment_data['buyer_email'],
-            buyer_name=payment_data['buyer_name'],
+            buyer_email=default_email,
+            buyer_name=default_name,
             payment_status='PENDING'
         )
         
@@ -113,12 +123,18 @@ def initiate_payment():
             "Content-Type": "application/json"
         }
         
+        print(f"Making Zeno API request with data: {payment_data}")
+        print(f"Using API key: {ZENO_API_KEY[:10]}...")
+        
         response = requests.post(
             ZENO_API_URL,
             headers=headers,
             json=payment_data,
-            timeout=30
+            timeout=60
         )
+        
+        print(f"Zeno API response status: {response.status_code}")
+        print(f"Zeno API response text: {response.text}")
         
         if response.status_code == 200:
             zeno_response = response.json()
@@ -142,22 +158,27 @@ def initiate_payment():
             return jsonify({
                 'success': False,
                 'error': 'Failed to initiate payment with Zeno',
-                'details': response.text
+                'details': response.text,
+                'status_code': response.status_code
             }), 400
             
     except Exception as e:
         db.session.rollback()
+        print(f"Payment initiation error: {str(e)}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @payments_bp.route('/payments/status/<order_id>', methods=['GET'])
-@jwt_required()
 def check_payment_status(order_id):
-    """Check payment status from both local database and Zeno API"""
+    """Check payment status from both local database and Zeno API - works for both authenticated and guest users"""
     try:
-        current_user_id = get_jwt_identity()
+        user, current_user_id = get_current_user()
         
         # Get payment from local database
-        payment = Payment.query.filter_by(order_id=order_id, user_id=current_user_id).first()
+        if current_user_id:
+            payment = Payment.query.filter_by(order_id=order_id, user_id=current_user_id).first()
+        else:
+            # For guest users, find by order_id only
+            payment = Payment.query.filter_by(order_id=order_id).first()
         
         if not payment:
             return jsonify({'error': 'Payment not found'}), 404
@@ -170,7 +191,7 @@ def check_payment_status(order_id):
         response = requests.get(
             f"{ZENO_ORDER_STATUS_URL}?order_id={order_id}",
             headers=headers,
-            timeout=30
+            timeout=60
         )
         
         if response.status_code == 200:
@@ -201,6 +222,7 @@ def check_payment_status(order_id):
             }), 200
             
     except Exception as e:
+        print(f"Payment status check error: {str(e)}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @payments_bp.route('/payments/webhook', methods=['POST'])
@@ -268,15 +290,10 @@ def get_user_payments():
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @payments_bp.route('/payments/verify-pin', methods=['POST'])
-@jwt_required()
 def verify_payment_pin():
-    """Verify PIN for payment authorization"""
+    """Verify PIN for payment authorization - works for both authenticated and guest users"""
     try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
+        user, current_user_id = get_current_user()
         
         data = request.get_json()
         pin = data.get('pin')
@@ -300,4 +317,14 @@ def verify_payment_pin():
             
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+# Health check endpoint for payments
+@payments_bp.route('/payments/health', methods=['GET'])
+def payments_health():
+    """Health check for payments service"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'payments',
+        'zeno_api_configured': bool(ZENO_API_KEY)
+    }), 200
 
